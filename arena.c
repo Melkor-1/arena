@@ -61,7 +61,7 @@ int main(void)
 {
     Arena *const arena = arena_new();
 
-    if (arena == NULL) {
+    if (arena == nullptr) {
         fprintf(stderr, "error: arena_new(): failed to allocate memory.\n");
         return EXIT_FAILURE;
     }
@@ -70,7 +70,7 @@ int main(void)
     int *b = arena_alloc(arena, sizeof *b);
     int *c = arena_alloc(arena, sizeof *c);
 
-    if (a == NULL || b == NULL || c == NULL) {
+    if (a == nullptr || b == nullptr || c == nullptr) {
         arena_destroy(arena);
         fprintf(stderr, "error: arena_alloc(): failed to allocate memory.\n");
         return EXIT_FAILURE;
