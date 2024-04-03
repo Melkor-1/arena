@@ -27,7 +27,7 @@ int main(void) {
     Arena *arena = arena_new();
 
     // Allocate memory within the arena
-    int *data = arena_alloc(arena, sizeof(int));
+    int *data = arena_alloc(arena, sizeof *data);
 
     // Deallocate memory and destroy the arena
     arena_destroy(arena);
