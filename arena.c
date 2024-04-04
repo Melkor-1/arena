@@ -1,6 +1,5 @@
 #include "arena.h"
 
-#include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,6 +27,7 @@ ATTRIB_CONST ATTRIB_INLINE static inline size_t max(size_t a, size_t b)
 ATTRIB_CONST ATTRIB_INLINE static inline size_t max_alignof(void)
 {
     #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+    #include <stdalign.h>
     return alignof(max_align_t);
     #else 
     /* For C99, see: https://stackoverflow.com/q/38271072/2001754://stackoverflow.com/q/38271072/20017547 */
@@ -60,6 +60,10 @@ Arena *arena_new(void *buf, size_t capacity)
 
 void *arena_alloc(Arena *arena, size_t size)
 {
+    if (size == 0) {
+        return nullptr;
+    }
+
     const size_t alignment = max_alignof();
     const size_t remain = alignment - (size % alignment);
 
@@ -92,6 +96,12 @@ void arena_reset(Arena *arena)
     /* We can use the same pool for subsequent calls. */
     arena->count = 0;
 }
+
+#undef ARENA_INITIAL_CAPACITY 
+#undef ATTRIB_CONST
+#undef ATTRIB_MALLOC
+#undef ATTRIB_NONNULL
+#undef ATTRIB_INLINE
 
 #ifdef TEST_MAIN
 

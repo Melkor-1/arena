@@ -31,10 +31,9 @@ void arena_destroy(Arena *arena) ATTRIB_NONNULL;
 
 /* Resets the arena, invalidating all existing allocations.
  *
- * The function is lazy; it doesn't actually zeroes out all the memory. Whilst 
- * existing pointers allocated by this arena are valid after this call as far
- * as the language is concerned, they should be considered invalid as using them
- * would invoke Undefined Behavior. */
+ * Whilst existing pointers allocated by this arena are valid after this call 
+ * as far as the language is concerned, they should be considered invalid as 
+ * using them * would invoke Undefined Behavior. */
 void arena_reset(Arena *arena) ATTRIB_NONNULL;
 
 /* Allocates a pointer from the arena.
@@ -43,9 +42,12 @@ void arena_reset(Arena *arena) ATTRIB_NONNULL;
  * requested size or less.
  *
  * If a request can not be entertained, i.e. would overflow, or the arena is full,
- * the function returns `nullptr`. The allocations are not freed on failure, 
- * and remain valid until the arena is reset or destroyed.
+ * the function returns `nullptr`. The function also returns a `nullptr` if the 
+ * requested size is 0.
+ *
+ * The allocations are not freed on failure, and remain valid until the arena 
+ * is reset or destroyed. 
  */
-void *arena_alloc(Arena *arena, size_t alloc_size) ATTRIB_MALLOC ATTRIB_NONNULL;
+void *arena_alloc(Arena *arena, size_t size) ATTRIB_MALLOC ATTRIB_NONNULL;
 
 #endif                          /* ARENA_H */
