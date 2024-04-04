@@ -69,13 +69,14 @@ void *arena_alloc(Arena *arena, size_t size)
     }
 
     const size_t alignment = max_alignof();
-    const size_t remain = alignment - (size % alignment);
+    const size_t remain = size % alignment;
 
-    if (remain && remain > SIZE_MAX - size) {
-        return nullptr;
+    if (remain) {
+        if ((alignment - remain) > SIZE_MAX - size) {
+            return nullptr;
+        } 
+        size += alignment - remain;
     }
-
-    size += remain;
 
     if (size > arena->capacity - arena->count) {
         return nullptr;
@@ -122,14 +123,14 @@ static void test_failure(void)
         fprintf(stderr, "error: arena_new(): failed to allocate memory.\n");
         exit(EXIT_FAILURE);
     }
-
-    assert(arena_alloc(arena, 100));
-    assert(arena_alloc(arena, 120) == nullptr);
+   
+    assert(arena_alloc(arena, 96));
+    assert(arena_alloc(arena, 112) == nullptr);
 
     arena_reset(arena);
 
-    assert(arena_alloc(arena, 120) == nullptr);
-    assert(arena_alloc(arena, 100));
+    assert(arena_alloc(arena, 99) == nullptr);
+    assert(arena_alloc(arena, 80));
 
     arena_destroy(arena);
 }
@@ -225,6 +226,7 @@ int main(void)
     test_client_dynamic_arena();
     test_client_automatic_arena();
     test_client_static_arena();
+    test_failure();
     return EXIT_SUCCESS;
 }
 

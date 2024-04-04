@@ -26,5 +26,5 @@ debug release: $(TARGET)
 clean: 
 	$(RM) $(TARGET)
 
-.PHONY: all release debug 
+.PHONY: release debug clean
 .DELETE_ON_ERROR:
