@@ -4,21 +4,27 @@ CFLAGS += -std=c2x
 CFLAGS += -fPIC
 CFLAGS += -Wall
 CFLAGS += -Wextra
-CFLAGS += -Wpedantic
+CFLAGS += -Werror
 CFLAGS += -Wwrite-strings
 CFLAGS += -Wno-parentheses
 CFLAGS += -Wpedantic
 CFLAGS += -Warray-bounds
 CFLAGS += -Wno-unused-function
 CFLAGS += -Wstrict-prototypes
+CFLAGS += -Wconversion
+CFLAGS += -Wdeprecated
 
-all: arena
+CFLAGS += -DTEST_MAIN
 
-test: CFLAGS += -DTEST_MAIN 
-test: arena 
+TARGET := arena
+
+release: CFLAGS += -O2 -s
+debug: CFLAGS += -g3 -ggdb 
+
+debug release: $(TARGET)
 
 clean: 
-	$(RM) arena
+	$(RM) $(TARGET)
 
-.PHONY: all test clean 
+.PHONY: all release debug 
 .DELETE_ON_ERROR:
