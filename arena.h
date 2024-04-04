@@ -9,10 +9,10 @@
     #define ATTRIB_NONNULL          __attribute__((nonnull))
     #define ATTRIB_INLINE           __attribute__((always_inline))
 #else
-    #define ATTRIB_CONST            /**/
-    #define ATTRIB_MALLOC           /**/
-    #define ATTRIB_NONNULL          /**/
-    #define ATTRIB_INLINE           /**/
+    #define ATTRIB_CONST /**/
+    #define ATTRIB_MALLOC /**/
+    #define ATTRIB_NONNULL /**/
+    #define ATTRIB_INLINE /**/
 #endif
 
 /* Bump allocator arena. */
@@ -21,7 +21,11 @@ typedef struct arena Arena;
 /* Returns a new arena with the specified `capacity`.
  * If `capacity` is 0, a default size of 50 Kib is used.
  * 
- * On allocation failure, returns `nullptr`. */
+ * On allocation failure, or if `buf` is a non-null pointer and `capacity` is 0,
+ * returns `nullptr`. 
+ *
+ * Passing a `buf` that is smaller than the specified `capacity` would invoke
+ * undefined behavior. */
 Arena *arena_new(void *buf, size_t capacity);
 
 /* Destroys the arena, freeing its memory.
