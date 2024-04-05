@@ -20,9 +20,10 @@ CFLAGS += -DTEST_MAIN
 TARGET := arena
 
 release: CFLAGS += -O2 -s
-debug: CFLAGS += -DNDEBUG -g3 -ggdb 
+release: $(TARGET)
 
-debug release: $(TARGET)
+debug: CFLAGS += -DDEBUG -g3 -ggdb 
+debug: $(TARGET)
 
 clean: 
 	$(RM) $(TARGET)

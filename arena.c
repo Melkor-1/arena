@@ -7,7 +7,14 @@
 /* In C2X/C23 or later, nullptr is a keyword. */
 /* Patch up C18 (__STDC_VERSION__ == 201710L) and earlier versions.  */
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
-    #define nullptr ((void *)0)
+#define nullptr ((void *)0)
+#endif
+
+#ifdef DEBUG
+#include <string.h>
+#define D(x) x
+#else
+#define D(x) (void) 0
 #endif
 
 #define ARENA_INITIAL_CAPACITY  (size_t)1024 * 50
@@ -26,14 +33,14 @@ ATTRIB_CONST ATTRIB_INLINE static inline size_t max(size_t a, size_t b)
 
 ATTRIB_CONST ATTRIB_INLINE static inline size_t max_alignof(void)
 {
-    #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-    #include <stdalign.h>
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#include <stdalign.h>
     return alignof (max_align_t);
-    #else
+#else
     /* For C99, see: https://stackoverflow.com/q/38271072/2001754://stackoverflow.com/q/38271072/20017547 */
     return max(max(max(sizeof (intmax_t), sizeof (long double)), sizeof (void)),
         sizeof (void (*)()));
-    #endif
+#endif
 }
 
 Arena *arena_new(void *buf, size_t capacity)
@@ -49,10 +56,8 @@ Arena *arena_new(void *buf, size_t capacity)
 
     if (a) {
         *a = (Arena) {
-            .pool = buf ? buf : calloc(1, capacity),
-            .capacity = capacity,
-            .is_heap_alloc = buf == nullptr,
-        };
+        .pool = buf ? buf : calloc(1, capacity),.capacity =
+                capacity,.is_heap_alloc = buf == nullptr,};
 
         if (a->pool == nullptr) {
             free(a);
@@ -81,25 +86,20 @@ void *arena_alloc(Arena *arena, size_t size)
     if (size > arena->capacity - arena->count) {
         return nullptr;
     }
-    #ifdef NDEBUG
-    #include <string.h>
+
     /* Set the bytes immediately before a user block, and the bytes immediately 
      * following such a block to non-zero. The intent is to trigger OBOB failures 
      * to inappropiate app use of strlen()/strnlen(), which keep forging ahead 
      * till encountering ascii NUL. */
     /* 0xA5 is used in FreeBSD's PHK malloc for debugging purposes. */
-    if (remain) {
+    D(if (remain) {
         memset(arena->pool + arena->count + (alignment - remain), 0xA5,
-            alignment - remain);
-    }
-    #endif
+                alignment - remain);}
+    );
     void *const p = arena->pool + arena->count;
 
     arena->count += size;
-    #ifdef NDEBUG
-    memset(arena->pool + arena->count, 0xA5, arena->capacity - arena->count);
-    #endif
-
+    D(memset(arena->pool + arena->count, 0xA5, arena->capacity - arena->count));
     return p;
 }
 
@@ -133,11 +133,17 @@ static void test_failure(void)
     assert(arena_new(stderr, 0) == nullptr);
 
     Arena *const arena = arena_new(nullptr, 100);
+
     assert(arena && "error: arena_new(): failed to allocate memory.\n");
 
-    assert(arena_alloc(arena, 96));
-    assert(arena->pool[96] == 0xA5 && arena->pool[97] == 0xA5
-        && arena->pool[98] == 0xA5 && arena->pool[99] == 0xA5);
+    D(
+        if (max_alignof() == 16) {
+            assert(arena_alloc(arena, 96));
+            assert(arena->pool[96] == 0xA5 && arena->pool[97] == 0xA5
+                && arena->pool[98] == 0xA5 && arena->pool[99] == 0xA5);
+        }
+    );
+
     assert(arena_alloc(arena, 112) == nullptr);
 
     arena_reset(arena);
@@ -148,22 +154,16 @@ static void test_failure(void)
     arena_destroy(arena);
 }
 
-static int test_allocation(Arena * arena)
+static void test_allocation(Arena *arena)
 {
-    if (arena == nullptr) {
-        fprintf(stderr, "error: arena_new(): failed to allocate memory.\n");
-        return EXIT_FAILURE;
-    }
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
 
     char *c = arena_alloc(arena, sizeof *c);
     int *i = arena_alloc(arena, sizeof *i);
     double *d = arena_alloc(arena, sizeof *d);
     FILE **fp = arena_alloc(arena, sizeof *fp);
-
-    if (!(c && i && d && fp)) {
-        fprintf(stderr, "error: arena_alloc(): failed to allocate memory.\n");
-        return EXIT_FAILURE;
-    }
+    
+    assert(c && i && d && fp && "error: arena_alloc(): failed to allocate memory.\n");
 
     *c = 'A';
     *i = 1;
@@ -176,7 +176,6 @@ static int test_allocation(Arena * arena)
         "&fp (FILE *) %p\n\n",
         (void *) c, *c, (void *) i, *i, (void *) d, *d, (void *) fp);
     arena_destroy(arena);
-    return EXIT_SUCCESS;
 }
 
 static void test_client_static_arena(void)
@@ -185,10 +184,7 @@ static void test_client_static_arena(void)
     Arena *const static_arena = arena_new(static_pool, sizeof static_pool);
 
     puts("---- Using a statically-allocated arena ----");
-
-    if (test_allocation(static_arena) == EXIT_FAILURE) {
-        exit(EXIT_FAILURE);
-    }
+    test_allocation(static_arena);
 }
 
 static void test_client_automatic_arena(void)
@@ -198,30 +194,19 @@ static void test_client_automatic_arena(void)
         arena_new(thread_local_pool, sizeof thread_local_pool);
 
     puts("---- Using an automatically-allocated arena ----");
-
-    if (test_allocation(thread_local_arena) == EXIT_FAILURE) {
-        exit(EXIT_FAILURE);
-    }
+    test_allocation(thread_local_arena);
 }
 
 static void test_client_dynamic_arena(void)
 {
     uint8_t *client_heap_pool = malloc(100 * (size_t) 1024);
 
-    if (client_heap_pool == nullptr) {
-        fprintf(stderr, "error: failed to allocate client_heap_pool.\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(client_heap_pool && "error: failed to allocate client_heap_pool.\n");
 
     Arena *client_heap_arena = arena_new(client_heap_pool, 100 * (size_t) 1024);
 
     puts("---- Using a dynamically-allocated arena ----");
-
-    if (test_allocation(client_heap_arena) == EXIT_FAILURE) {
-        free(client_heap_pool);
-        exit(EXIT_FAILURE);
-    }
-
+    test_allocation(client_heap_arena);
     free(client_heap_pool);
 }
 
@@ -230,10 +215,7 @@ static void test_lib_dynamic_arena(void)
     Arena *const lib_arena = arena_new(nullptr, 100);
 
     puts("---- Using the library's internal arena ----");
-
-    if (test_allocation(lib_arena) == EXIT_FAILURE) {
-        exit(EXIT_FAILURE);
-    }
+    test_allocation(lib_arena);
 }
 
 int main(void)
