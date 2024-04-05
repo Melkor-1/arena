@@ -6,6 +6,7 @@ CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Werror
 CFLAGS += -Wwrite-strings
+CFLAGS += -Wno-unused-variable
 CFLAGS += -Wno-parentheses
 CFLAGS += -Wpedantic
 CFLAGS += -Warray-bounds
@@ -19,7 +20,7 @@ CFLAGS += -DTEST_MAIN
 TARGET := arena
 
 release: CFLAGS += -O2 -s
-debug: CFLAGS += -g3 -ggdb 
+debug: CFLAGS += -DNDEBUG -g3 -ggdb 
 
 debug release: $(TARGET)
 

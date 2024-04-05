@@ -74,17 +74,32 @@ void *arena_alloc(Arena *arena, size_t size)
     if (remain) {
         if ((alignment - remain) > SIZE_MAX - size) {
             return nullptr;
-        } 
+        }
         size += alignment - remain;
     }
 
     if (size > arena->capacity - arena->count) {
         return nullptr;
     }
-
+    #ifdef NDEBUG
+    #include <string.h>
+    /* Set the bytes immediately before a user block, and the bytes immediately 
+     * following such a block to non-zero. The intent is to trigger OBOB failures 
+     * to inappropiate app use of strlen()/strnlen(), which keep forging ahead 
+     * till encountering ascii NUL. */
+    /* 0xA5 is used in FreeBSD's PHK malloc for debugging purposes. */
+    if (remain) {
+        memset(arena->pool + arena->count + (alignment - remain), 0xA5,
+            alignment - remain);
+    }
+    #endif
     void *const p = arena->pool + arena->count;
 
     arena->count += size;
+    #ifdef NDEBUG
+    memset(arena->pool + arena->count, 0xA5, arena->capacity - arena->count);
+    #endif
+
     return p;
 }
 
@@ -118,13 +133,11 @@ static void test_failure(void)
     assert(arena_new(stderr, 0) == nullptr);
 
     Arena *const arena = arena_new(nullptr, 100);
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
 
-    if (arena == nullptr) {
-        fprintf(stderr, "error: arena_new(): failed to allocate memory.\n");
-        exit(EXIT_FAILURE);
-    }
-   
     assert(arena_alloc(arena, 96));
+    assert(arena->pool[96] == 0xA5 && arena->pool[97] == 0xA5
+        && arena->pool[98] == 0xA5 && arena->pool[99] == 0xA5);
     assert(arena_alloc(arena, 112) == nullptr);
 
     arena_reset(arena);
@@ -147,7 +160,10 @@ static int test_allocation(Arena * arena)
     double *d = arena_alloc(arena, sizeof *d);
     FILE **fp = arena_alloc(arena, sizeof *fp);
 
-    assert(c && i && d && fp);
+    if (!(c && i && d && fp)) {
+        fprintf(stderr, "error: arena_alloc(): failed to allocate memory.\n");
+        return EXIT_FAILURE;
+    }
 
     *c = 'A';
     *i = 1;
