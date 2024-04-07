@@ -7,14 +7,14 @@
 /* In C2X/C23 or later, nullptr is a keyword. */
 /* Patch up C18 (__STDC_VERSION__ == 201710L) and earlier versions.  */
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
-#define nullptr ((void *)0)
+    #define nullptr ((void *)0)
 #endif
 
 #ifdef DEBUG
-#include <string.h>
-#define D(x) x
+    #include <string.h>
+    #define D(x) x
 #else
-#define D(x) (void) 0
+    #define D(x) (void) 0
 #endif
 
 #define ARENA_INITIAL_CAPACITY  (size_t)1024 * 50
@@ -54,10 +54,12 @@ Arena *arena_new(void *buf, size_t capacity)
 
     Arena *a = calloc(1, sizeof *a);
 
-    if (a) {
+    if (a != nullptr) {
         *a = (Arena) {
-        .pool = buf ? buf : calloc(1, capacity),.capacity =
-                capacity,.is_heap_alloc = buf == nullptr,};
+            .pool = buf ? buf : calloc(1, capacity),
+            .capacity = capacity,
+            .is_heap_alloc = buf == nullptr,
+        };
 
         if (a->pool == nullptr) {
             free(a);

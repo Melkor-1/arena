@@ -22,7 +22,7 @@ TARGET := arena
 release: CFLAGS += -O2 -s
 release: $(TARGET)
 
-debug: CFLAGS += -DDEBUG -g3 -ggdb 
+debug: CFLAGS += -DDEBUG -g3 -ggdb -fanalyzer -fsanitize=address,leak,undefined
 debug: $(TARGET)
 
 clean: 
