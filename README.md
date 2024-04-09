@@ -11,10 +11,11 @@ simplifying memory management and reducing the risk of memory leaks.
 ## Working:
 
 The API is straightforward: begin with `arena_new()` and end with `arena_destroy()`. Memory allocations are 
-made using `arena_alloc()`, without the need for manual deallocation or tracking. The arena dynamically resizes 
-as needed.
+made using `arena_alloc()`, without the need for manual deallocation or tracking. The arena can be resized
+with `arena_resize()`.
 
-An example follows:
+The arena can use a buffer passed by the client as backing storage, or allocate a
+buffer of its own. An example follows:
 
 ```c
 #include <stdio.h>
@@ -22,28 +23,49 @@ An example follows:
 
 #include "arena.h"
 
-int main(void) {
-    // Create a new arena
-    Arena *arena = arena_new();
+int main(void) 
+{
+    Arena *arena = arena_new(NULL, 10000);
+
+    if (arena == NULL) {
+        // Memory allocated failed
+    }
 
     // Allocate memory within the arena
-    int *data = arena_alloc(arena, sizeof *data);
+    int *data = arena_alloc(arena, alignof(int), sizeof *data);
 
-    // Deallocate memory and destroy the arena
+    if (data == NULL) {
+        // The backing storage is full. Either add a new pool with
+        // arena_resize() or create a new arena.
+    }
+
+    // Reset the arena and use it like a new one
+    arena_reset(arena);
+
+    // Or deallocate all memory associated with it and destroy the arena
     arena_destroy(arena);
 
     return EXIT_SUCCESS;
 }
 ```
 
+The rest of the API, and its documentation, can be found in `arena.h`.
+
 ## Building:
 
-The whole implementation is about 60 lines of code (besides the test run).
+The whole implementation is about 230 lines of code (besides the test run).
 
 To build a sample program, clone the repository and run:
 
 ```shell
 cd arena
-make test
+make 
 ./arena
 ```
+
+For a debug build:
+
+```shell
+make debug
+```
+
