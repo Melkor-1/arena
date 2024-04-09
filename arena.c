@@ -1,14 +1,18 @@
 #include "arena.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+/* *INDENT-OFF* */
 /* In C2X/C23 or later, nullptr is a keyword. */
 /* Patch up C18 (__STDC_VERSION__ == 201710L) and earlier versions.  */
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
     #define nullptr ((void *)0)
 #endif
+
+#define INITIAL_MPOOL_COUNT  2
 
 #ifdef DEBUG
     #include <string.h>
@@ -16,119 +20,316 @@
 #else
     #define D(x) (void) 0
 #endif
+/* *INDENT-ON* */
 
-#define ARENA_INITIAL_CAPACITY  (size_t)1024 * 50
-
-struct arena {
+typedef struct pool {
     size_t count;
     size_t capacity;
     bool is_heap_alloc;
-    uint8_t *pool;
-};
+    uint8_t *buf;
+} M_Pool;
 
-ATTRIB_CONST ATTRIB_INLINE static inline size_t max(size_t a, size_t b)
+typedef struct arena {
+    size_t count;
+    size_t capacity;
+    size_t current;
+    size_t last_alloc_size;
+    M_Pool *pools[];
+} Arena;
+
+ATTRIB_INLINE ATTRIB_CONST static inline bool is_power_of_two(uintptr_t x)
 {
-    return a > b ? a : b;
+    return (x & (x - 1)) == 0;
 }
 
-ATTRIB_CONST ATTRIB_INLINE static inline size_t max_alignof(void)
+ATTRIB_INLINE ATTRIB_CONST static inline bool is_multiple_of(size_t a, size_t b)
 {
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#include <stdalign.h>
-    return alignof (max_align_t);
-#else
-    /* For C99, see: https://stackoverflow.com/q/38271072/2001754://stackoverflow.com/q/38271072/20017547 */
-    return max(max(max(sizeof (intmax_t), sizeof (long double)), sizeof (void)),
-        sizeof (void (*)()));
-#endif
+    return a / b * b == a;
 }
 
-Arena *arena_new(void *buf, size_t capacity)
+static M_Pool *pool_new(void *buf, size_t capacity)
 {
     if (capacity == 0) {
         if (buf != nullptr) {
             return nullptr;
         }
-        capacity = ARENA_INITIAL_CAPACITY;
+        capacity = DEFAULT_BUF_CAP;
     }
 
-    Arena *a = calloc(1, sizeof *a);
+    M_Pool *const pool = calloc(1, sizeof *pool);
 
-    if (a != nullptr) {
-        *a = (Arena) {
-            .pool = buf ? buf : calloc(1, capacity),
+/* *INDENT-OFF* */
+    if (pool != nullptr) {
+        *pool = (M_Pool) {
             .capacity = capacity,
             .is_heap_alloc = buf == nullptr,
+            .buf = buf ? buf : calloc(1, capacity),
         };
-
-        if (a->pool == nullptr) {
-            free(a);
-            return nullptr;
-        }
     }
-    return a;
+/* *INDENT-ON* */
+
+    return pool;
 }
 
-void *arena_alloc(Arena *arena, size_t size)
+Arena *arena_new(void *buf, size_t capacity)
 {
-    if (size == 0) {
+    Arena *const arena = calloc(1,
+        sizeof *arena + (INITIAL_MPOOL_COUNT * sizeof arena->pools[0]));
+
+    if (arena == nullptr) {
         return nullptr;
     }
 
-    const size_t alignment = max_alignof();
-    const size_t remain = size % alignment;
+    arena->capacity = INITIAL_MPOOL_COUNT;
+    arena->count = 1;
+    arena->current = 1;
+    arena->pools[0] = pool_new(buf, capacity);
 
-    if (remain) {
-        if ((alignment - remain) > SIZE_MAX - size) {
+    if (arena->pools[0] == nullptr) {
+        free(arena);
+        return nullptr;
+    }
+
+    return arena;
+}
+
+void *arena_alloc(Arena *arena, size_t alignment, size_t size)
+{
+    if (size == 0 
+        || (alignment != 1 && !is_power_of_two(alignment))
+        || !is_multiple_of(size, alignment)) {
+        return nullptr;
+    }
+
+    M_Pool *curr_pool = arena->pools[arena->current - 1];
+    uint8_t *const p = curr_pool->buf + curr_pool->count;
+    const uintptr_t original = ((uintptr_t) p);
+
+    if (original > UINTPTR_MAX - alignment) {
+        return nullptr;
+    }
+
+    const uintptr_t remain = original & (alignment - 1);
+    const uintptr_t aligned =
+        remain != 0 ? original + (alignment - remain) : original;
+    const size_t offset = aligned - original;
+
+    if (size > SIZE_MAX - offset) {
+        return nullptr;
+    }
+
+    size += offset;
+
+    if (size > curr_pool->capacity - curr_pool->count) {
+        return nullptr;
+    }
+
+    /* Set the optional padding for alignment immediately before a user block, 
+     * and the bytes immediately following such a block to non-zero. 
+     * The intent is to trigger OBOB failures to inappropiate app use of 
+     * strlen()/strnlen(), which keep forging ahead till encountering ascii NUL. */
+    D(
+        /* 0xA5 is used in FreeBSD's PHK malloc for debugging purposes. */
+        if (remain) {
+        memset(p + (alignment - remain), 0xA5, alignment - remain);}
+    );
+
+    curr_pool->count += size;
+    D(memset(curr_pool->buf + curr_pool->count, 0xA5,
+            curr_pool->capacity - curr_pool->count));
+
+    arena->last_alloc_size = size;
+
+    /* Equal to "aligned", but preserves provenance. */
+    return p + offset;
+}
+
+void *arena_allocarray(Arena *arena, 
+                       size_t alignment, 
+                       size_t nmemb,
+                       size_t size)
+{
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+        return nullptr;
+    }
+
+    return arena_alloc(arena, alignment, nmemb * size);
+}
+
+bool arena_realloc(Arena *arena, size_t size)
+{
+    if (size == arena->last_alloc_size) {
+        return true;
+    }
+
+    M_Pool *const curr_pool = arena->pools[arena->current - 1];
+
+    if (size == 0) {
+        /* Delete allocation. */
+        curr_pool->count -= arena->last_alloc_size;
+        arena->last_alloc_size = size;
+        return true;
+    }
+
+    if (size < arena->last_alloc_size) {
+        /* Shrink allocation. */
+        curr_pool->count -= arena->last_alloc_size - size;
+        arena->last_alloc_size = size;
+        return true;
+    }
+
+    if (size > (curr_pool->capacity - curr_pool->count)) {
+        return false;
+    }
+
+    /* Expand allocation. */
+    curr_pool->count += size - arena->last_alloc_size;
+    arena->last_alloc_size = size;
+    return true;
+}
+
+Arena *arena_resize(Arena *restrict arena, void *restrict buf, size_t capacity)
+{
+    if (arena->count >= arena->capacity) {
+        arena->capacity *= 2;
+        Arena *tmp = realloc(arena,
+            sizeof *tmp + (arena->capacity * sizeof arena->pools[0]));
+
+        if (tmp == nullptr) {
             return nullptr;
         }
-        size += alignment - remain;
+
+        arena = tmp;
     }
 
-    if (size > arena->capacity - arena->count) {
+    M_Pool *const new_pool = pool_new(buf, capacity);
+
+    if (new_pool == nullptr) {
         return nullptr;
     }
 
-    /* Set the bytes immediately before a user block, and the bytes immediately 
-     * following such a block to non-zero. The intent is to trigger OBOB failures 
-     * to inappropiate app use of strlen()/strnlen(), which keep forging ahead 
-     * till encountering ascii NUL. */
-    /* 0xA5 is used in FreeBSD's PHK malloc for debugging purposes. */
-    D(if (remain) {
-        memset(arena->pool + arena->count + (alignment - remain), 0xA5,
-                alignment - remain);}
-    );
-    void *const p = arena->pool + arena->count;
-
-    arena->count += size;
-    D(memset(arena->pool + arena->count, 0xA5, arena->capacity - arena->count));
-    return p;
+    arena->pools[arena->count++] = new_pool;
+    ++arena->current;
+    return arena;
 }
 
 void arena_destroy(Arena *arena)
 {
-    if (arena->is_heap_alloc) {
-        free(arena->pool);
+    for (size_t i = 0; i < arena->count; ++i) {
+        if (arena->pools[i]->is_heap_alloc) {
+            free(arena->pools[i]->buf);
+        }
+        free(arena->pools[i]);
     }
+
     free(arena);
 }
 
 void arena_reset(Arena *arena)
 {
-    /* We can reuse the same pool for subsequent calls. */
-    arena->count = 0;
+    for (size_t i = 0; i < arena->count; ++i) {
+        arena->pools[i]->count = 0;
+    }
+    arena->current = 1;
 }
-
-#undef ARENA_INITIAL_CAPACITY
-#undef ATTRIB_CONST
-#undef ATTRIB_MALLOC
-#undef ATTRIB_NONNULL
-#undef ATTRIB_INLINE
 
 #ifdef TEST_MAIN
 
 #include <assert.h>
+#include <stdalign.h>
 #include <stdio.h>
+
+static void test_arena_allocarray(void)
+{
+    Arena *const arena = arena_new(nullptr, 100);
+
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+
+    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
+
+    assert(nums && "error: arena_allocarray(): failed to allocate memory.\n");
+    arena_destroy(arena);
+}
+
+static void test_arena_realloc(void)
+{
+    Arena *const arena = arena_new(nullptr, 100);
+
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+
+    assert(arena_alloc(arena, 1, 10));
+    assert(arena->pools[0]->count == 10 && arena->last_alloc_size == 10);
+
+    /* Test expansion. */
+    assert(arena_realloc(arena, 20));
+    assert(arena->pools[0]->count == 20 && arena->last_alloc_size == 20);
+
+    /* Test shrinking. */
+    assert(arena_realloc(arena, 15));
+    assert(arena->pools[0]->count == 15 && arena->last_alloc_size == 15);
+
+    /* Test deletion. */
+    assert(arena_realloc(arena, 0));
+    assert(arena->pools[0]->count == 0 && arena->last_alloc_size == 0);
+
+    arena_destroy(arena);
+}
+
+ATTRIB_INLINE ATTRIB_CONST static inline bool is_aligned(const void *ptr,
+                                                         size_t      byte_count)
+{
+    return (uintptr_t) ptr % (byte_count) == 0;
+}
+
+static void test_debug_magic_bytes(void)
+{
+    Arena *const arena = arena_new(nullptr, 100);
+
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+    assert(arena_alloc(arena, 1, 95));
+    uint8_t *const curr_pool = arena->pools[0]->buf;
+
+    assert(curr_pool[96] == 0xA5 && curr_pool[97] == 0xA5
+        && curr_pool[98] == 0xA5 && curr_pool[99] == 0xA5);
+    arena_destroy(arena);
+}
+
+static void test_alignment(void)
+{
+    Arena *const arena = arena_new(nullptr, 1000);
+
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+
+    const int *const a = arena_alloc(arena, alignof (int), 5 * sizeof *a);
+    const double *const b = arena_alloc(arena, alignof (double), 2 * sizeof *b);
+    const char *const c = arena_alloc(arena, 1, 10);
+    const short *const d = arena_alloc(arena, alignof (short), 5 * sizeof *d);
+
+    assert(a && is_aligned(a, alignof (int)));
+    assert(b && is_aligned(b, alignof (double)));
+    assert(c && is_aligned(c, 1));
+    assert(d && is_aligned(d, alignof (short)));
+    arena_destroy(arena);
+}
+
+static void test_growth(void)
+{
+    Arena *arena = arena_new(nullptr, 1000);
+
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+    const char *c = arena_alloc(arena, 1, 10000);
+
+    assert(!c);
+
+    arena = arena_resize(arena, nullptr, 10000);
+    assert(arena->current == 2 && arena->count == 2);
+    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+    c = arena_alloc(arena, 1, 10000);
+    assert(c);
+    arena_reset(arena);
+    assert(arena->current == 1 && arena->count == 2);
+    arena_destroy(arena);
+}
 
 static void test_failure(void)
 {
@@ -137,46 +338,30 @@ static void test_failure(void)
     Arena *const arena = arena_new(nullptr, 100);
 
     assert(arena && "error: arena_new(): failed to allocate memory.\n");
-
-    D(
-        if (max_alignof() == 16) {
-            assert(arena_alloc(arena, 96));
-            assert(arena->pool[96] == 0xA5 && arena->pool[97] == 0xA5
-                && arena->pool[98] == 0xA5 && arena->pool[99] == 0xA5);
-        }
-    );
-
-    assert(arena_alloc(arena, 112) == nullptr);
-
+    assert(arena_alloc(arena, 1, 112) == nullptr);
     arena_reset(arena);
-
-    assert(arena_alloc(arena, 99) == nullptr);
-    assert(arena_alloc(arena, 80));
-
+    assert(arena_alloc(arena, 16, 80));
     arena_destroy(arena);
 }
 
-static void test_allocation(Arena *arena)
+static void test_allocation(Arena * arena)
 {
     assert(arena && "error: arena_new(): failed to allocate memory.\n");
 
-    char *c = arena_alloc(arena, sizeof *c);
-    int *i = arena_alloc(arena, sizeof *i);
-    double *d = arena_alloc(arena, sizeof *d);
-    FILE **fp = arena_alloc(arena, sizeof *fp);
-    
-    assert(c && i && d && fp && "error: arena_alloc(): failed to allocate memory.\n");
+    char *const c = arena_alloc(arena, 1, 5);
+    int *const i = arena_alloc(arena, alignof (int), sizeof *i);
+    double *const d = arena_alloc(arena, alignof (double), sizeof *d);
+
+    assert(c && i && d && "error: arena_alloc(): failed to allocate memory.\n");
 
     *c = 'A';
     *i = 1;
     *d = 20103.212;
-    *fp = stderr;
 
     printf("&c (char *): %p, c: %c\n"
         "&i (int *): %p, i: %d\n"
-        "&d (double *): %p, d: %lf\n"
-        "&fp (FILE *) %p\n\n",
-        (void *) c, *c, (void *) i, *i, (void *) d, *d, (void *) fp);
+        "&d (double *): %p, d: %lf\n",
+        (void *) c, *c, (void *) i, *i, (void *) d, *d);
     arena_destroy(arena);
 }
 
@@ -201,11 +386,12 @@ static void test_client_automatic_arena(void)
 
 static void test_client_dynamic_arena(void)
 {
-    uint8_t *client_heap_pool = malloc(100 * (size_t) 1024);
+    uint8_t *const client_heap_pool = malloc(100 * (size_t) 1024);
 
     assert(client_heap_pool && "error: failed to allocate client_heap_pool.\n");
 
-    Arena *client_heap_arena = arena_new(client_heap_pool, 100 * (size_t) 1024);
+    Arena *const client_heap_arena =
+        arena_new(client_heap_pool, 100 * (size_t) 1024);
 
     puts("---- Using a dynamically-allocated arena ----");
     test_allocation(client_heap_arena);
@@ -226,8 +412,24 @@ int main(void)
     test_client_dynamic_arena();
     test_client_automatic_arena();
     test_client_static_arena();
+    test_arena_allocarray();
+    test_arena_realloc();
     test_failure();
+    test_alignment();
+    test_growth();
+    D(test_debug_magic_bytes());
     return EXIT_SUCCESS;
 }
+
+#undef ATTRIB_CONST
+#undef ATTRIB_MALLOC
+#undef ATTRIB_NONNULL
+#undef ATTRIB_NONNULLEX
+#undef ATTRIB_INLINE
+#undef nullptr
+#undef DEFAULT_BUF_CAP
+#undef INITIAL_MPOOL_COUNT
+#undef DEBUG
+#undef D
 
 #endif                          /* TEST_MAIN */

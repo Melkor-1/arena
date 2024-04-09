@@ -22,7 +22,8 @@ TARGET := arena
 release: CFLAGS += -O2 -s
 release: $(TARGET)
 
-debug: CFLAGS += -DDEBUG -g3 -ggdb -fanalyzer -fsanitize=address,leak,undefined
+# To run under valgrind, remove the sanitizer.
+debug: CFLAGS += -DDEBUG -g3 -ggdb #-fanalyzer -fsanitize=address,leak,undefined
 debug: $(TARGET)
 
 clean: 
