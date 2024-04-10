@@ -56,8 +56,8 @@ void arena_reset(Arena *arena) ATTRIB_NONNULL;
  *
  * If a request can not be entertained, i.e. would overflow, or `arena` is full,
  * the function returns `nullptr`. The function also returns a `nullptr` if the 
- * requested `size` is 0 or if `alignment` is not a power of 2, or if `size` is
- * not a multiple of `alignment`.
+ * requested `size` or `alignment` is 0 or if `alignment` is not a power of 2, 
+ * or if `size` is not a multiple of `alignment`.
  *
  * Any allocations made prior to this call are not freed on failure, and remain 
  * valid until the arena is either reset or destroyed.
