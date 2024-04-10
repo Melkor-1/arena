@@ -4,6 +4,7 @@
 /* *INDENT-OFF* */
 #if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
     #define ATTRIB_CONST            __attribute__((const))
+    #define ATTRIB_PURE             __attribute__((pure))
     #define ATTRIB_MALLOC           __attribute__((malloc))
     #define ATTRIB_NONNULL          __attribute__((nonnull))
     #define ATTRIB_NONNULLEX(...)   __attribute__((nonnull(__VA_ARGS__)))
@@ -109,5 +110,21 @@ void *arena_allocarray(Arena *arena,
  * Else it returns `true`.
  */
 bool arena_realloc(Arena *arena, size_t size) ATTRIB_NONNULL;
+
+/* Gets the remaining capacity in the current pool (in bytes). */
+size_t arena_pool_capacity(Arena *arena) ATTRIB_PURE;
+
+/* Calculates the number of bytes currently allocated across all chunks in `arena`.
+ *
+ * If you allocate types of different alignments or types with larger-than-typical 
+ * alignment in the same arena, some padding bytes might get allocated in the 
+ * arena. Those padding bytes will add to this function's resulting sum. The 
+ * allocated bytes do not include the size of this arena's metadata. */
+size_t arena_allocated_bytes(Arena *arena) ATTRIB_PURE;
+
+/* Calculates the number of bytes requested from the C allocator for this arena. 
+ * This number is equal to the allocated_bytes() plus the size of the arena 
+ * metadata. */
+size_t arena_allocated_bytes_including_metadata(Arena *arena) ATTRIB_PURE;
 
 #endif                          /* ARENA_H */

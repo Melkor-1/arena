@@ -57,6 +57,30 @@ ATTRIB_INLINE ATTRIB_CONST static inline bool is_multiple_of(size_t a, size_t b)
     return a % b == 0;
 }
 
+size_t arena_pool_capacity(Arena *arena) 
+{
+    const M_Pool *const curr_pool = arena->pools[arena->current - 1];
+    return curr_pool->buf_len - curr_pool->offset;
+}
+
+size_t arena_allocated_bytes(Arena *arena)
+{
+    size_t sum = 0;
+
+    for (size_t i = 0; i < arena->count; ++i) {
+        sum += arena->pools[i]->buf_len;
+    }
+
+    return sum;
+}
+
+size_t arena_allocated_bytes_including_metadata(Arena *arena)
+{
+    return offsetof(Arena, pools)
+        + sizeof arena->pools[0] * arena->capacity  
+        + arena_allocated_bytes(arena);
+}
+
 static M_Pool *pool_new(void *buf, size_t capacity)
 {
     if (capacity == 0) {
