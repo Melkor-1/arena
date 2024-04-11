@@ -166,7 +166,8 @@ void *arena_alloc(Arena *arena, size_t alignment, size_t size)
     D(
         /* 0xA5 is used in FreeBSD's PHK malloc for debugging purposes. */
         if (remain) {
-        memset(p + (alignment - remain), 0xA5, alignment - remain);}
+            memset(p + (alignment - remain), 0xA5, alignment - remain);
+        }
     );
 
     curr_pool->offset += size;
@@ -377,11 +378,14 @@ static void test_growth(void)
     arena_destroy(arena);
 }
 
-static void test_failure(void)
+static void test_arena_failure(void)
 {
     assert(arena_new(stderr, 0) == nullptr);
 
     Arena *const arena = arena_new(nullptr, 100);
+
+/* Should fail if nmemb is 0, or is size is 0, or if alignment is 0, or if size
+ * is greater than SIZE_MAX / nmemb */
 
     assert(arena && "error: arena_new(): failed to allocate memory.\n");
     assert(arena_alloc(arena, 1, 112) == nullptr);
@@ -389,6 +393,11 @@ static void test_failure(void)
     assert(arena_alloc(arena, 1, 0) == nullptr);
     assert(arena_alloc(arena, 2, 5) == nullptr);
     assert(arena_alloc(arena, 3, 5) == nullptr);
+    assert(arena_allocarray(arena, 0, 10, 20) == nullptr);
+    assert(arena_allocarray(arena, 10, 0, 20) == nullptr);
+    assert(arena_allocarray(arena, 10, 20, 0) == nullptr);
+    assert(arena_allocarray(arena, 2, 10, SIZE_MAX) == nullptr);
+    assert(arena_resize(arena, stderr, 0) == nullptr);
     arena_reset(arena);
     assert(arena_alloc(arena, 16, 80));
     arena_destroy(arena);
@@ -464,7 +473,7 @@ int main(void)
     test_client_static_arena();
     test_arena_allocarray();
     test_arena_realloc();
-    test_failure();
+    test_arena_failure();
     test_alignment();
     test_growth();
     D(test_debug_magic_bytes());
