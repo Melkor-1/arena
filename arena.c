@@ -83,13 +83,6 @@ size_t arena_allocated_bytes_including_metadata(Arena *arena)
 
 static M_Pool *pool_new(void *buf, size_t capacity)
 {
-    if (capacity == 0) {
-        if (buf != nullptr) {
-            return nullptr;
-        }
-        capacity = DEFAULT_BUF_CAP;
-    }
-
     M_Pool *const pool = calloc(1, sizeof *pool);
 
 /* *INDENT-OFF* */
@@ -107,6 +100,13 @@ static M_Pool *pool_new(void *buf, size_t capacity)
 
 Arena *arena_new(void *buf, size_t capacity)
 {
+    if (capacity == 0) {
+        if (buf != nullptr) {
+            return nullptr;
+        }
+        capacity = DEFAULT_BUF_CAP;
+    }
+
     Arena *const arena = calloc(1,
         sizeof *arena + (INITIAL_MPOOL_COUNT * sizeof arena->pools[0]));
 
@@ -184,7 +184,11 @@ void *arena_allocarray(Arena *arena,
                        size_t nmemb,
                        size_t size)
 {
-    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+    if (nmemb == 0 || size == 0 || alignment == 0) {
+        return nullptr;
+    }
+
+    if (size > SIZE_MAX / nmemb) {
         return nullptr;
     }
 
@@ -225,6 +229,13 @@ bool arena_realloc(Arena *arena, size_t size)
 
 Arena *arena_resize(Arena *restrict arena, void *restrict buf, size_t capacity)
 {
+    if (capacity == 0) {
+        if (buf != nullptr) {
+            return nullptr;
+        }
+        capacity = DEFAULT_BUF_CAP;
+    }
+
     if (arena->count >= arena->capacity) {
         arena->capacity *= 2;
         Arena *tmp = realloc(arena,
