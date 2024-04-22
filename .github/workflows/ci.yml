@@ -22,8 +22,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Build
         run: make
-      - name: Build tests
-        run: make build-tests
       - name: Run tests
         run: make test
 
