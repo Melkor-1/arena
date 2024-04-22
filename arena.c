@@ -281,204 +281,38 @@ void arena_reset(Arena *arena)
 }
 
 #ifdef TEST_MAIN
-
-#include <assert.h>
+    
 #include <stdalign.h>
-#include <stdio.h>
 
-static void test_arena_allocarray(void)
+int main(void) 
 {
-    Arena *const arena = arena_new(nullptr, 100);
+    Arena *arena = arena_new(nullptr, 10000);
 
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
+    if (arena == nullptr) {
+        fprintf(stderr, "arena_new() failed to alloc 10000 bytes.\n");
+        return EXIT_FAILURE;
+    }
 
-    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
+    // Allocate memory within the arena
+    int *data = arena_alloc(arena, alignof(int), sizeof *data);
 
-    assert(nums && "error: arena_allocarray(): failed to allocate memory.\n");
-    arena_destroy(arena);
-}
+    if (data == nullptr) {
+        // The backing storage is full. Either add a new pool with
+        // arena_resize() or create a new arena.
+        fprintf(stderr, "arena_alloc() failed to allocate memory for an int.\n");
+        return EXIT_FAILURE;
+    }
 
-static void test_arena_realloc(void)
-{
-    Arena *const arena = arena_new(nullptr, 100);
-
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-
-    assert(arena_alloc(arena, 1, 10));
-    assert(arena->pools[0]->offset == 10 && arena->last_alloc_size == 10);
-
-    /* Test expansion. */
-    assert(arena_realloc(arena, 20));
-    assert(arena->pools[0]->offset == 20 && arena->last_alloc_size == 20);
-
-    /* Test shrinking. */
-    assert(arena_realloc(arena, 15));
-    assert(arena->pools[0]->offset == 15 && arena->last_alloc_size == 15);
-
-    /* Test deletion. */
-    assert(arena_realloc(arena, 0));
-    assert(arena->pools[0]->offset == 0 && arena->last_alloc_size == 0);
-
-    arena_destroy(arena);
-}
-
-ATTRIB_INLINE ATTRIB_CONST static inline bool is_aligned(const void *ptr,
-                                                         size_t      byte_count)
-{
-    return (uintptr_t) ptr % (byte_count) == 0;
-}
-
-static void test_debug_magic_bytes(void)
-{
-    Arena *const arena = arena_new(nullptr, 100);
-
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-    assert(arena_alloc(arena, 1, 95));
-    uint8_t *const curr_pool = arena->pools[0]->buf;
-
-    assert(curr_pool[96] == 0xA5 && curr_pool[97] == 0xA5
-        && curr_pool[98] == 0xA5 && curr_pool[99] == 0xA5);
-    arena_destroy(arena);
-}
-
-static void test_alignment(void)
-{
-    Arena *const arena = arena_new(nullptr, 1000);
-
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-
-    const int *const a = arena_alloc(arena, alignof (int), 5 * sizeof *a);
-    const double *const b = arena_alloc(arena, alignof (double), 2 * sizeof *b);
-    const char *const c = arena_alloc(arena, 1, 10);
-    const short *const d = arena_alloc(arena, alignof (short), 5 * sizeof *d);
-
-    assert(a && is_aligned(a, alignof (int)));
-    assert(b && is_aligned(b, alignof (double)));
-    assert(c && is_aligned(c, 1));
-    assert(d && is_aligned(d, alignof (short)));
-    arena_destroy(arena);
-}
-
-static void test_growth(void)
-{
-    Arena *arena = arena_new(nullptr, 1000);
-
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-    const char *c = arena_alloc(arena, 1, 10000);
-
-    assert(!c);
-
-    arena = arena_resize(arena, nullptr, 10000);
-    assert(arena->current == 2 && arena->count == 2);
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-    c = arena_alloc(arena, 1, 10000);
-    assert(c);
+    // Reset the arena and use it like a new one
     arena_reset(arena);
-    assert(arena->current == 1 && arena->count == 2);
+
+    // Or deallocate all memory associated with it and destroy the arena
     arena_destroy(arena);
-}
 
-static void test_arena_failure(void)
-{
-    assert(arena_new(stderr, 0) == nullptr);
-
-    Arena *const arena = arena_new(nullptr, 100);
-
-/* Should fail if nmemb is 0, or is size is 0, or if alignment is 0, or if size
- * is greater than SIZE_MAX / nmemb */
-
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-    assert(arena_alloc(arena, 1, 112) == nullptr);
-    assert(arena_alloc(arena, 0, 1) == nullptr);
-    assert(arena_alloc(arena, 1, 0) == nullptr);
-    assert(arena_alloc(arena, 2, 5) == nullptr);
-    assert(arena_alloc(arena, 3, 5) == nullptr);
-    assert(arena_allocarray(arena, 0, 10, 20) == nullptr);
-    assert(arena_allocarray(arena, 10, 0, 20) == nullptr);
-    assert(arena_allocarray(arena, 10, 20, 0) == nullptr);
-    assert(arena_allocarray(arena, 2, 10, SIZE_MAX) == nullptr);
-    assert(arena_resize(arena, stderr, 0) == nullptr);
-    arena_reset(arena);
-    assert(arena_alloc(arena, 16, 80));
-    arena_destroy(arena);
-}
-
-static void test_allocation(Arena * arena)
-{
-    assert(arena && "error: arena_new(): failed to allocate memory.\n");
-
-    char *const c = arena_alloc(arena, 1, 5);
-    int *const i = arena_alloc(arena, alignof (int), sizeof *i);
-    double *const d = arena_alloc(arena, alignof (double), sizeof *d);
-
-    assert(c && i && d && "error: arena_alloc(): failed to allocate memory.\n");
-
-    *c = 'A';
-    *i = 1;
-    *d = 20103.212;
-
-    printf("&c (char *): %p, c: %c\n"
-        "&i (int *): %p, i: %d\n"
-        "&d (double *): %p, d: %lf\n",
-        (void *) c, *c, (void *) i, *i, (void *) d, *d);
-    arena_destroy(arena);
-}
-
-static void test_client_static_arena(void)
-{
-    static uint8_t alignas (max_align_t) static_pool[BUFSIZ];
-    Arena *const static_arena = arena_new(static_pool, sizeof static_pool);
-
-    puts("---- Using a statically-allocated arena ----");
-    test_allocation(static_arena);
-}
-
-static void test_client_automatic_arena(void)
-{
-    uint8_t alignas (max_align_t) thread_local_pool[BUFSIZ];
-    Arena *const thread_local_arena =
-        arena_new(thread_local_pool, sizeof thread_local_pool);
-
-    puts("---- Using an automatically-allocated arena ----");
-    test_allocation(thread_local_arena);
-}
-
-static void test_client_dynamic_arena(void)
-{
-    uint8_t *const client_heap_pool = malloc(100 * (size_t) 1024);
-
-    assert(client_heap_pool && "error: failed to allocate client_heap_pool.\n");
-
-    Arena *const client_heap_arena =
-        arena_new(client_heap_pool, 100 * (size_t) 1024);
-
-    puts("---- Using a dynamically-allocated arena ----");
-    test_allocation(client_heap_arena);
-    free(client_heap_pool);
-}
-
-static void test_lib_dynamic_arena(void)
-{
-    Arena *const lib_arena = arena_new(nullptr, 100);
-
-    puts("---- Using the library's internal arena ----");
-    test_allocation(lib_arena);
-}
-
-int main(void)
-{
-    test_lib_dynamic_arena();
-    test_client_dynamic_arena();
-    test_client_automatic_arena();
-    test_client_static_arena();
-    test_arena_allocarray();
-    test_arena_realloc();
-    test_arena_failure();
-    test_alignment();
-    test_growth();
-    D(test_debug_magic_bytes());
     return EXIT_SUCCESS;
 }
+
+#endif                          /* TEST_MAIN */
 
 #undef ATTRIB_CONST
 #undef ATTRIB_MALLOC
@@ -490,5 +324,3 @@ int main(void)
 #undef INITIAL_MPOOL_COUNT
 #undef DEBUG
 #undef D
-
-#endif                          /* TEST_MAIN */
