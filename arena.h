@@ -20,7 +20,6 @@
 
 #define DEFAULT_BUF_CAP     256 * (size_t)1024
 
-#include <stdbool.h>
 #include <stddef.h>
 
 /* Bump allocator arena. */

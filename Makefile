@@ -12,25 +12,22 @@ CFLAGS += -Wpedantic
 CFLAGS += -Warray-bounds
 CFLAGS += -Wno-unused-function
 CFLAGS += -Wstrict-prototypes
+CFLAGS += -Wconversion
 CFLAGS += -Wdeprecated
 
-TARGET := arena
-TEST_TARGET := tests
+CFLAGS += -DTEST_MAIN
 
-release: CFLAGS += -O2 -s -DTEST_MAIN
+TARGET := arena
+
+release: CFLAGS += -O2 -s
 release: $(TARGET)
 
-debug: CFLAGS += -DTEST_MAIN -DDEBUG -g3 -ggdb -fsanitize=address,leak,undefined
+# To run under valgrind, remove the sanitizer.
+debug: CFLAGS += -DDEBUG -g3 -ggdb #-fanalyzer -fsanitize=address,leak,undefined
 debug: $(TARGET)
 
-test: CFLAGS += -DDEBUG
-test: $(TEST_TARGET)
-	./$(TEST_TARGET) --verbose=3 
-
-# Add targets for a shared library and a static library.
-
 clean: 
-	$(RM) $(TARGET) $(TEST_TARGET)
+	$(RM) $(TARGET)
 
-.PHONY: release debug build-tests test clean
+.PHONY: release debug clean
 .DELETE_ON_ERROR:
