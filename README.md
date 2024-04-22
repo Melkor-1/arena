@@ -1,6 +1,7 @@
 # An Arena Allocator in C
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://https://github.com/Melkor-1/lexer-cpp/edit/main/LICENSE)
+[![build](https://github.com/Melkor-1/arena/actions/workflows/ci.yml/badge.svg)](https://https://github.com/Melkor-1/arena/actions/workflows/c.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://https://github.com/Melkor-1/arena/edit/main/LICENSE)
 
 An arena allocator is a memory allocation technique used in computer programming where memory is allocated from 
 a pre-allocated block (arena) rather than individually requesting memory from the operating system. 
