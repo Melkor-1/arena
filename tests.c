@@ -7,6 +7,13 @@
 
 #include "arena.c"
 
+/* *INDENT-OFF* */
+/* In C2X/C23 or later, nullptr is a keyword. */
+/* Patch up C18 (__STDC_VERSION__ == 201710L) and earlier versions.  */
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
+    #define nullptr ((void *)0)
+#endif
+
 static inline bool is_aligned(const void *ptr, size_t byte_count)
 {
     return (uintptr_t) ptr % byte_count == 0;

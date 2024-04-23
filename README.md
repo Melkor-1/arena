@@ -55,7 +55,8 @@ The rest of the API, and its documentation, can be found in `arena.h`.
 ## Building:
 
 The whole implementation is about 230 lines of code (besides the test run), and
-compiles perfectly with C99 and above.
+compiles perfectly with C99 and above. The tests require one C-11 specific
+feature (`stdalign.h`).
 
 To build a sample program, clone the repository and run:
 
