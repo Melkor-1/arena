@@ -57,9 +57,10 @@ ATTRIB_INLINE ATTRIB_CONST static inline bool is_multiple_of(size_t a, size_t b)
     return a % b == 0;
 }
 
-size_t arena_pool_capacity(Arena *arena) 
+size_t arena_pool_capacity(Arena *arena)
 {
     const M_Pool *const curr_pool = arena->pools[arena->current - 1];
+
     return curr_pool->buf_len - curr_pool->offset;
 }
 
@@ -77,7 +78,7 @@ size_t arena_allocated_bytes(Arena *arena)
 size_t arena_allocated_bytes_including_metadata(Arena *arena)
 {
     return offsetof(Arena, pools)
-        + sizeof arena->pools[0] * arena->capacity  
+        + sizeof arena->pools[0] * arena->capacity
         + arena_allocated_bytes(arena);
 }
 
@@ -129,9 +130,8 @@ Arena *arena_new(void *buf, size_t capacity)
 
 void *arena_alloc(Arena *arena, size_t alignment, size_t size)
 {
-    if (size == 0 
-        || alignment == 0
-        || (alignment != 1 && !is_power_of_two(alignment))
+    if (size == 0
+        || alignment == 0 || (alignment != 1 && !is_power_of_two(alignment))
         || !is_multiple_of(size, alignment)) {
         return nullptr;
     }
@@ -180,9 +180,9 @@ void *arena_alloc(Arena *arena, size_t alignment, size_t size)
     return p + offset;
 }
 
-void *arena_allocarray(Arena *arena, 
+void *arena_allocarray(Arena *arena,
                        size_t alignment, 
-                       size_t nmemb,
+                       size_t nmemb, 
                        size_t size)
 {
     if (nmemb == 0 || size == 0 || alignment == 0) {
@@ -281,10 +281,10 @@ void arena_reset(Arena *arena)
 }
 
 #ifdef TEST_MAIN
-    
+
 #include <stdalign.h>
 
-int main(void) 
+int main(void)
 {
     Arena *arena = arena_new(nullptr, 10000);
 
@@ -292,17 +292,16 @@ int main(void)
         fprintf(stderr, "arena_new() failed to alloc 10000 bytes.\n");
         return EXIT_FAILURE;
     }
-
     // Allocate memory within the arena
-    int *data = arena_alloc(arena, alignof(int), sizeof *data);
+    int *data = arena_alloc(arena, alignof (int), sizeof *data);
 
     if (data == nullptr) {
         // The backing storage is full. Either add a new pool with
         // arena_resize() or create a new arena.
-        fprintf(stderr, "arena_alloc() failed to allocate memory for an int.\n");
+        fprintf(stderr,
+            "arena_alloc() failed to allocate memory for an int.\n");
         return EXIT_FAILURE;
     }
-
     // Reset the arena and use it like a new one
     arena_reset(arena);
 
