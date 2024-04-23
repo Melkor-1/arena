@@ -54,7 +54,8 @@ The rest of the API, and its documentation, can be found in `arena.h`.
 
 ## Building:
 
-The whole implementation is about 230 lines of code (besides the test run).
+The whole implementation is about 230 lines of code (besides the test run), and
+compiles perfectly with C99 and above.
 
 To build a sample program, clone the repository and run:
 
@@ -69,4 +70,9 @@ For a debug build:
 ```shell
 make debug
 ```
+
+## Using with C++:
+
+The instructions to use the library in C++ are given in
+[porting_c++.md](porting_c++.md).
 

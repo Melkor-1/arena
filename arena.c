@@ -39,13 +39,13 @@ typedef struct pool {
     uint8_t *buf;
 } M_Pool;
 
-typedef struct arena {
+struct arena {
     size_t count;
     size_t capacity;
     size_t current;
     size_t last_alloc_size;
     M_Pool *pools[];
-} Arena;
+};
 
 ATTRIB_INLINE ATTRIB_CONST static inline bool is_power_of_two(uintptr_t x)
 {
