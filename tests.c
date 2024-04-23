@@ -1,3 +1,6 @@
+/* NOTE: Use TEST_ASSERT() for unrelated functions. Say malloc() calls, or 
+ *       calls to arena_new() when testing arena_alloc(). Else use TEST_CHECK().
+ */
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +16,7 @@
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
     #define nullptr ((void *)0)
 #endif
+/* *INDENT-ON* */
 
 static inline bool is_aligned(const void *ptr, size_t byte_count)
 {
@@ -24,24 +28,29 @@ static void test_arena_new(void)
     TEST_CHECK(arena_new(stderr, 0) == nullptr);
 
     Arena *const arena = arena_new(nullptr, 100);
+
     TEST_CHECK(arena);
     arena_destroy(arena);
 
     uint8_t *const backing_storage1 = malloc(100 * (size_t) 1024);
+
     TEST_ASSERT(backing_storage1);
 
     Arena *const heap_arena = arena_new(backing_storage1, 100 * (size_t) 1024);
+
     TEST_CHECK(heap_arena);
     arena_destroy(heap_arena);
     free(backing_storage1);
-    
+
     static uint8_t alignas (max_align_t) backing_storage2[BUFSIZ];
-    Arena *const static_arena = arena_new(backing_storage2, sizeof backing_storage2);
+    Arena *const static_arena =
+        arena_new(backing_storage2, sizeof backing_storage2);
     TEST_CHECK(static_arena);
     arena_destroy(static_arena);
 
     uint8_t alignas (max_align_t) backing_storage3[BUFSIZ];
-    Arena *const thread_local_arena = arena_new(backing_storage3, sizeof backing_storage3);
+    Arena *const thread_local_arena =
+        arena_new(backing_storage3, sizeof backing_storage3);
     TEST_CHECK(thread_local_arena);
     arena_destroy(thread_local_arena);
 }
@@ -49,14 +58,16 @@ static void test_arena_new(void)
 static void test_arena_destroy(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
+
+    TEST_ASSERT(arena);
     arena_destroy(arena);
 }
 
 static void test_arena_reset(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
+
+    TEST_ASSERT(arena);
     arena_reset(arena);
 
     for (size_t i = 0; i < arena->count; ++i) {
@@ -70,6 +81,7 @@ static void test_arena_reset(void)
 static void test_arena_alloc(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
+
     TEST_ASSERT(arena);
 
     TEST_CHECK(arena_alloc(arena, 1, 112) == nullptr);
@@ -101,16 +113,18 @@ static void test_arena_alloc(void)
 static void test_arena_resize(void)
 {
     Arena *arena = arena_new(nullptr, 1000);
-    TEST_CHECK(arena);
+
+    TEST_ASSERT(arena);
 
     TEST_CHECK(arena_resize(arena, stderr, 0) == nullptr);
 
     arena = arena_resize(arena, nullptr, 10000);
-    TEST_ASSERT(arena);
+    TEST_CHECK(arena);
     TEST_CHECK(arena->current == 2 && arena->count == 2);
 
     const char *c = arena_alloc(arena, 1, 10000);
-    TEST_CHECK(c);
+
+    TEST_ASSERT(c);
 
     arena_reset(arena);
     TEST_CHECK(arena->current == 1 && arena->count == 2);
@@ -120,9 +134,11 @@ static void test_arena_resize(void)
 static void test_arena_allocarray(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
 
-    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
+    TEST_ASSERT(arena);
+
+    const int *const nums =
+        arena_allocarray(arena, alignof (int), 10, sizeof *nums);
     TEST_CHECK(nums);
 
     TEST_CHECK(arena_allocarray(arena, 0, 10, 20) == nullptr);
@@ -136,6 +152,7 @@ static void test_arena_allocarray(void)
 static void test_arena_realloc(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
+
     TEST_ASSERT(arena);
 
     TEST_ASSERT(arena_alloc(arena, 1, 10));
@@ -155,44 +172,46 @@ static void test_arena_realloc(void)
     arena_destroy(arena);
 }
 
-/* We can't really test the correctness of these three functions because of
- * alignment. Or can we? */
 static void test_arena_pool_capacity(void)
 {
     Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
-    
-    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
-    TEST_CHECK(nums);
 
-    TEST_CHECK(arena_pool_capacity(arena) > 0);
+    TEST_ASSERT(arena);
+    TEST_ASSERT(arena_alloc(arena, 1, 40));
+    TEST_CHECK(arena_pool_capacity(arena) == 60);
+
+    TEST_ASSERT(arena_alloc(arena, 1, 49));
+    TEST_CHECK(arena_pool_capacity(arena) == 11);
+
+    TEST_ASSERT(arena_alloc(arena, 1, 11));
+    TEST_CHECK(arena_pool_capacity(arena) == 0);
     arena_destroy(arena);
 }
 
 static void test_arena_allocated_bytes(void)
 {
-    Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
-    
-    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
-    TEST_CHECK(nums);
+    Arena *arena = arena_new(nullptr, 100);
 
-    TEST_CHECK(arena_allocated_bytes(arena) > 0);
+    TEST_ASSERT(arena);
+    arena = arena_resize(arena, nullptr, 10002);
+    TEST_ASSERT(arena);
+    TEST_CHECK(arena_allocated_bytes(arena) == 10102);
     arena_destroy(arena);
 }
 
 static void test_arena_allocated_bytes_including_metadata(void)
 {
-    Arena *const arena = arena_new(nullptr, 100);
-    TEST_CHECK(arena);
-    
-    const int *const nums = arena_allocarray(arena, alignof (int), 10, sizeof *nums);
-    TEST_CHECK(nums);
+    Arena *arena = arena_new(nullptr, 100);
 
-    TEST_CHECK(arena_allocated_bytes_including_metadata(arena) > 0);
+    TEST_ASSERT(arena);
+    arena = arena_resize(arena, nullptr, 10002);
+    TEST_CHECK(arena_allocated_bytes_including_metadata(arena) == 10102
+        + offsetof(Arena, pools)
+        + sizeof arena->pools[0] * arena->capacity);
     arena_destroy(arena);
 }
 
+/* *INDENT-OFF* */
 TEST_LIST = {
     { "arena_new", test_arena_new },
     { "arena_destroy", test_arena_destroy },
@@ -206,3 +225,4 @@ TEST_LIST = {
     { "arena_allocated_bytes_including_metadata", test_arena_allocated_bytes_including_metadata },
     { nullptr, nullptr }
 };
+/* *INDENT-ON* */
