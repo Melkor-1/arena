@@ -1,7 +1,12 @@
 /* NOTE: Use TEST_ASSERT() for unrelated functions. Say malloc() calls, or 
  *       calls to arena_new() when testing arena_alloc(). Else use TEST_CHECK().
  */
-#include <stdalign.h>
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+    #define HAVE_STDALIGN_H
+    #include <stdalign.h>
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +47,7 @@ static void test_arena_new(void)
     arena_destroy(heap_arena);
     free(backing_storage1);
 
+#ifdef HAVE_STDALIGN_H
     static uint8_t alignas (max_align_t) backing_storage2[BUFSIZ];
     Arena *const static_arena =
         arena_new(backing_storage2, sizeof backing_storage2);
@@ -53,6 +59,7 @@ static void test_arena_new(void)
         arena_new(backing_storage3, sizeof backing_storage3);
     TEST_CHECK(thread_local_arena);
     arena_destroy(thread_local_arena);
+#endif
 }
 
 static void test_arena_destroy(void)
@@ -98,6 +105,7 @@ static void test_arena_alloc(void)
 
     arena_reset(arena);
 
+#ifdef HAVE_STDALIGN_H
     const int *const a = arena_alloc(arena, alignof (int), 5 * sizeof *a);
     const double *const b = arena_alloc(arena, alignof (double), 2 * sizeof *b);
     const char *const c = arena_alloc(arena, 1, 10);
@@ -107,6 +115,7 @@ static void test_arena_alloc(void)
     TEST_CHECK(b && is_aligned(b, alignof (double)));
     TEST_CHECK(c && is_aligned(c, 1));
     TEST_CHECK(d && is_aligned(d, alignof (short)));
+#endif
     arena_destroy(arena);
 }
 
@@ -137,9 +146,11 @@ static void test_arena_allocarray(void)
 
     TEST_ASSERT(arena);
 
+#ifdef HAVE_STDALIGN_H
     const int *const nums =
         arena_allocarray(arena, alignof (int), 10, sizeof *nums);
     TEST_CHECK(nums);
+#endif
 
     TEST_CHECK(arena_allocarray(arena, 0, 10, 20) == nullptr);
     TEST_CHECK(arena_allocarray(arena, 10, 0, 20) == nullptr);
