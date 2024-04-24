@@ -33,13 +33,13 @@ jobs:
           install: >-
             git
             make
-            gcc
+            gcc-13
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: make CC=gcc
+        run: make
       - name: Test
-        run: make CC=gcc test
+        run: make test
           
 
 
