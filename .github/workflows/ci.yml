@@ -37,9 +37,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: make CC=gcc
+        run: make CC=mingw64
       - name: Test
-        run: make CC=gcc test
+        run: make CC=mingw64 test
           
 
 
