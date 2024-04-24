@@ -4,7 +4,11 @@ on: [workflow_dispatch, push, pull_request]
 
 jobs:
   test_unixy:
-    runs-on: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout
