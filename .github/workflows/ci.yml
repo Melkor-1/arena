@@ -29,17 +29,17 @@ jobs:
       - name: Setup MSYS2
         uses: msys2/setup-msys2/@v2
         with:
-          msystem: MINGW64
           update: true
           install: >-
             git
             make
+            gcc
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: make CC=mingw64
+        run: make CC=gcc
       - name: Test
-        run: make CC=mingw64 test
+        run: make CC=gcc test
           
 
 
