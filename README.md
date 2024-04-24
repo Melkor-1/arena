@@ -54,10 +54,6 @@ The rest of the API, and its documentation, can be found in `arena.h`.
 
 ## Building:
 
-The whole implementation is about 230 lines of code (besides the test run), and
-compiles perfectly with C99 and above. The tests require one C-11 specific
-feature (`stdalign.h`).
-
 To build a sample program, clone the repository and run:
 
 ```shell
@@ -71,6 +67,36 @@ For a debug build:
 ```shell
 make debug
 ```
+
+For a shared library (`.so`):
+
+```shell
+make shared
+```
+
+For a static library (`.a`):
+
+```shell
+make static
+```
+
+To run the tests:
+
+```shell
+make test
+```
+
+The [Makefile](Makefile) specifies `CC=gcc-13`, which can be overrided with:
+
+```shell
+make CC=gcc
+
+# Or:
+make CC=clang
+```
+
+Whilst the [Makefile](Makefile) specifies `std=c2x`, the code and the tests compiles perfectly with C99.
+Though, if C11 is available, some tests make use of C11's `stdalign.h`.
 
 ## Using with C++:
 
