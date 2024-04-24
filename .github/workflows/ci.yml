@@ -4,11 +4,7 @@ on: [workflow_dispatch, push, pull_request]
 
 jobs:
   test_unixy:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: [ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout
@@ -27,7 +23,7 @@ jobs:
 
     steps:
       - name: Setup MSYS2
-      - uses: msys2/setup-msys2/@v2
+        uses: msys2/setup-msys2/@v2
         with:
           update: true
           install: >-
@@ -35,7 +31,7 @@ jobs:
             make
             mingw64
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
       - name: Build
         run: make
       - name: Test
