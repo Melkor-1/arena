@@ -68,7 +68,9 @@ jobs:
       - name: Build and Test
         uses: vmactions/solaris-vm@v1
         with:
-          run: gmake test
+          run: |
+            pkg install gcc 
+            gmake test
 
 
   test_windows:
@@ -90,6 +92,4 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build and Test
-        run: |
-          pkg install gcc
-          make test
+        run: make test
