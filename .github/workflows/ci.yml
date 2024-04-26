@@ -69,7 +69,7 @@ jobs:
         uses: vmactions/solaris-vm@v1
         with:
           run: |
-            pkg list | grep gcc 
+            sudo pkg install system/library/gcc/gcc-c-runtime 
             gmake test
 
 
