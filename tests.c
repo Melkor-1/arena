@@ -1,7 +1,6 @@
 /* NOTE: Use TEST_ASSERT() for unrelated functions. Say malloc() calls, or 
  *       calls to arena_new() when testing arena_alloc(). Else use TEST_CHECK().
  */
-
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
     #define HAVE_STDALIGN_H
     #include <stdalign.h>
@@ -10,6 +9,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/* The testing library doesn't define these. Define them here instead of
+ * modifying the header. These are needed to compile cleanly with std=c.. and 
+ * pedantic flags. */
+#define _POSIX_C_SOURCE 200819L
+#define _XOPEN_SOURCE 700
 
 #include "acutest.h"
 
