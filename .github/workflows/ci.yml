@@ -68,7 +68,7 @@ jobs:
       - name: Build and Test
         uses: vmactions/solaris-vm@v1
         with:
-          run: make test
+          run: gmake test
 
 
   test_windows:
