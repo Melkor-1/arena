@@ -36,17 +36,17 @@ jobs:
             architecture: arm64
             version: '14.0'
 
-          # - name: openbsd
-          #   architecture: x86-64
-          #   version: '7.4'
+          - name: openbsd
+            architecture: x86-64
+            version: '7.4'
 
-          # - name: openbsd
-          #   architecture: arm64
-          #   version: '7.4'
+          - name: openbsd
+            architecture: arm64
+            version: '7.4'
 
-          # - name: netbsd
-          #   architecture: x86-64
-          #   version: '9.3'
+          - name: netbsd
+            architecture: x86-64
+            version: '9.3'
 
     steps:
       - name: Checkout
@@ -58,8 +58,7 @@ jobs:
           architecture: ${{ matrix.os.architecture }}
           version: ${{ matrix.os.version }}
           run: |
-            sudo pkg install gmake 
-            gmake test
+            make test
             
 
   test_windows:
