@@ -54,21 +54,7 @@ The rest of the API, and its documentation, can be found in `arena.h`.
 
 ## Building:
 
-To build a sample program, clone the repository and run:
-
-```shell
-cd arena
-make 
-./arena
-```
-
-For a debug build:
-
-```shell
-make debug
-```
-
-For a shared library (`.so`):
+To build a shared library (`.so`):
 
 ```shell
 make shared
@@ -80,26 +66,27 @@ For a static library (`.a`):
 make static
 ```
 
-To run the tests:
+To build and run the tests:
 
 ```shell
 make test
 ```
 
-The [Makefile](Makefile) specifies `CC=gcc-13`, which can be overrided with:
+The allocator is written in Standard C99 and has been built and tested on these 
+platforms:
 
-```shell
-make CC=gcc
+* Linux 
+* Windows
+* MacOS
+* FreeBSD
+* OpenBSD
+* NetBSD
+* Oracle Solaris
 
-# Or:
-make CC=clang
-```
-
-Whilst the [Makefile](Makefile) specifies `std=c2x`, the code and the tests compiles perfectly with C99.
-Though, if C11 is available, some tests make use of C11's `stdalign.h`.
+If C11 is available, the tests make use of `stdalign.h`.
 
 ## Using with C++:
 
-The instructions to use the library in C++ are given in
+The instructions to use the library with C++ are present in
 [porting_c++.md](porting_c++.md).
 
