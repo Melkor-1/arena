@@ -24,10 +24,10 @@
   in the calls to `malloc()` and family, and probably some more places. The fix
   is to use casts.
 
-* Flexible array members in struct Arena and struct M_Pool. Flexible array members 
+* Flexible array members in `struct Arena` and `struct M_Pool`. Flexible array members 
   are illegal in C++. The fix is to allocate memory separately for them.
 
-* extern "C". In the arena.h header, add:
+* `extern "C"`. In the arena.h header, add:
 
   ```c
   #ifdef __cplusplus
