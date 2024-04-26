@@ -1,6 +1,4 @@
-CC := gcc-13
-
-CFLAGS += -std=c2x
+CFLAGS += -std=c11
 CFLAGS += -fPIC
 CFLAGS += -Wall
 CFLAGS += -Wextra
