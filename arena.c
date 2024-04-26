@@ -280,39 +280,6 @@ void arena_reset(Arena *arena)
     arena->current = 1;
 }
 
-#ifdef TEST_MAIN
-
-#include <stdalign.h>
-
-int main(void)
-{
-    Arena *arena = arena_new(nullptr, 10000);
-
-    if (arena == nullptr) {
-        fprintf(stderr, "arena_new() failed to alloc 10000 bytes.\n");
-        return EXIT_FAILURE;
-    }
-    // Allocate memory within the arena
-    int *data = arena_alloc(arena, alignof (int), sizeof *data);
-
-    if (data == nullptr) {
-        // The backing storage is full. Either add a new pool with
-        // arena_resize() or create a new arena.
-        fprintf(stderr,
-            "arena_alloc() failed to allocate memory for an int.\n");
-        return EXIT_FAILURE;
-    }
-    // Reset the arena and use it like a new one
-    arena_reset(arena);
-
-    // Or deallocate all memory associated with it and destroy the arena
-    arena_destroy(arena);
-
-    return EXIT_SUCCESS;
-}
-
-#endif                          /* TEST_MAIN */
-
 #undef ATTRIB_CONST
 #undef ATTRIB_MALLOC
 #undef ATTRIB_NONNULL
