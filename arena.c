@@ -321,5 +321,4 @@ int main(void)
 #undef nullptr
 #undef DEFAULT_BUF_CAP
 #undef INITIAL_MPOOL_COUNT
-#undef DEBUG
 #undef D

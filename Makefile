@@ -39,7 +39,7 @@ $(DLIB_TARGET): $(TARGET).o
 
 test: CFLAGS += -DDEBUG
 test: $(TEST_TARGET)
-	./$(TEST_TARGET) --verbose=3 
+	./$(TEST_TARGET) --verbose=3
 
 clean: 
 	$(RM) $(TARGET) $(TEST_TARGET) $(TARGET).o $(SLIB_TARGET) $(DLIB_TARGET)
