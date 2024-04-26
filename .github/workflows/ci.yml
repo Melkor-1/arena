@@ -3,20 +3,62 @@ name: Arena Tests
 on: [workflow_dispatch, push, pull_request]
 
 jobs:
-  test_unixy:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+  test_linux:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build
-        run: make
-      - name: Test
+      - name: Build and Test
         run: make test
+
+  test_macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: make test
+
+
+  test_bsd:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os:
+          - name: freebsd
+            architecture: x86-64
+            version: '14.0'
+
+          - name: freebsd
+            architecture: arm64
+            version: '14.0'
+
+          - name: openbsd
+            architecture: x86-64
+            version: '7.4'
+
+          - name: openbsd
+            architecture: arm64
+            version: '7.4'
+
+          - name: netbsd
+            architecture: x86-64
+            version: '9.3'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test on ${{ matrix.os.name }}-${{ matrix.os.architecture }}-${{ matrix.os.version }}
+        uses: cross-platform-actions/action@v0.24.0
+        with:
+          operating_system: ${{ matrix.os.name }}
+          architecture: ${{ matrix.os.architecture }}
+          version: ${{ matrix.os.version }}
+          run: make test
+            
 
   test_windows:
     runs-on: windows-latest
@@ -36,13 +78,5 @@ jobs:
             gcc
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build
-        run: make CC=gcc
-      - name: Test
-        run: make CC=gcc test
-          
-
-
-
-
-
+      - name: Build and Test
+        run: make test
