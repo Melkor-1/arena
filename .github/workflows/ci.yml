@@ -12,6 +12,7 @@ jobs:
       - name: Build and Test
         run: make test
 
+
   test_macos:
     runs-on: macos-latest
 
@@ -59,6 +60,7 @@ jobs:
           version: ${{ matrix.os.version }}
           run: make test
             
+
   test_solaris:
     runs-on: ubuntu-latest
 
@@ -69,7 +71,8 @@ jobs:
         uses: vmactions/solaris-vm@v1
         with:
           run: |
-            sudo pkg install system/library/gcc/gcc-c-runtime 
+            sudo pkg install developer/gcc/gcc-c-7
+            sudo ln -s /usr/bin/gcc /usr/bin/cc
             gmake test
 
 
