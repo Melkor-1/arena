@@ -90,4 +90,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build and Test
-        run: make CC=gcc test
+        run: |
+          pkg install gcc
+          make test
