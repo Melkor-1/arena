@@ -57,7 +57,9 @@ jobs:
           operating_system: ${{ matrix.os.name }}
           architecture: ${{ matrix.os.architecture }}
           version: ${{ matrix.os.version }}
-          run: make test
+          run: |
+            pkg install gmake 
+            make test
             
 
   test_windows:
