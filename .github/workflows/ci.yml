@@ -59,7 +59,7 @@ jobs:
           run: |
             sudo pkg install developer/gcc/gcc-c-7
             sudo ln -s /usr/bin/gcc /usr/bin/cc
-            make -x SUN_MAKE_COMPAT_MODE=GNU test
+            make test
 
 
   test_windows:
