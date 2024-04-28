@@ -14,12 +14,12 @@ CFLAGS += -Wdeprecated
 
 CFLAGS += $(EXTRA_CFLAGS)
 
-TARGET := arena
-TEST_TARGET := tests
-SLIB_TARGET := libarena.a
-DLIB_TARGET := libarena.so
+TARGET = arena
+TEST_TARGET = tests
+SLIB_TARGET = libarena.a
+DLIB_TARGET = libarena.so
 
-RM := /bin/rm -f
+RM = /bin/rm -f
 
 static: $(SLIB_TARGET)
 
