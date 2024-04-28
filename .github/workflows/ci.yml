@@ -29,25 +29,11 @@ jobs:
     strategy:
       matrix:
         os:
-          - name: freebsd
-            architecture: x86-64
-            version: '14.0'
-
-          - name: freebsd
-            architecture: arm64
-            version: '14.0'
-
-          - name: openbsd
-            architecture: x86-64
-            version: '7.4'
-
-          - name: openbsd
-            architecture: arm64
-            version: '7.4'
-
-          - name: netbsd
-            architecture: x86-64
-            version: '9.3'
+          - { name: freebsd, architecture: x86-64, version: '14.0' }
+          - { name: freebsd, architecture: arm64, version: '14.0' }
+          - { name: openbsd, architecture: x86-64, version: '7.4' }
+          - { name: openbsd, architecture: arm64, version: '7.4' }
+          - { name: netbsd, architecture: x86-64, version: '9.3' }
 
     steps:
       - name: Checkout
@@ -73,7 +59,7 @@ jobs:
           run: |
             sudo pkg install developer/gcc/gcc-c-7
             sudo ln -s /usr/bin/gcc /usr/bin/cc
-            make test
+            make -x SUN_MAKE_COMPAT_MODE=GNU test
 
 
   test_windows:
