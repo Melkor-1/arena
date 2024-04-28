@@ -82,6 +82,7 @@ platforms:
 * OpenBSD
 * NetBSD
 * Oracle Solaris
+* OmniOS
 
 If C11 is available, the tests make use of `stdalign.h`.
 
