@@ -1,6 +1,10 @@
 /* NOTE: Use TEST_ASSERT() for unrelated functions. Say malloc() calls, or 
  *       calls to arena_new() when testing arena_alloc(). Else use TEST_CHECK().
  */
+
+#define _POSIX_C_SOURCE 200819L
+#define _XOPEN_SOURCE 700
+
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
     #define HAVE_STDALIGN_H
     #include <stdalign.h>
@@ -10,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if 0
 /* The testing library doesn't define these. Define them here instead of
  * modifying the header. These are needed to compile cleanly with std=c.. and 
  * pedantic flags. These are needed for the declaration of clock_gettime() 
@@ -18,6 +23,7 @@
 #if defined(__sun) && defined(__SVR4)
     #define _POSIX_C_SOURCE 200819L
     #define _XOPEN_SOURCE 700
+#endif
 #endif
 
 #include "acutest.h"
