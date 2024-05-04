@@ -20,9 +20,6 @@
     #define _XOPEN_SOURCE 700
 #endif
 
-#define _POSIX_C_SOURCE 200819L
-#define _XOPEN_SOURCE 700
-
 #include "acutest.h"
 
 #include "arena.c"
