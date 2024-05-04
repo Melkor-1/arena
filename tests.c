@@ -1,9 +1,12 @@
 /* NOTE: Use TEST_ASSERT() for unrelated functions. Say malloc() calls, or 
  *       calls to arena_new() when testing arena_alloc(). Else use TEST_CHECK().
  */
-
 #define _POSIX_C_SOURCE 200819L
 #define _XOPEN_SOURCE 700
+
+/* Compilation fails on MacOS with missing types. This is a kludge at the
+ * moment. */
+#include <sys/types.h>
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
     #define HAVE_STDALIGN_H
@@ -13,18 +16,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#if 0
-/* The testing library doesn't define these. Define them here instead of
- * modifying the header. These are needed to compile cleanly with std=c.. and 
- * pedantic flags. These are needed for the declaration of clock_gettime() 
- * to be visible in Oracle Solaris. These defines cause compilation on MacOS 
- * to fail with weird missing types errors, hence they're guarded. */
-#if defined(__sun) && defined(__SVR4)
-    #define _POSIX_C_SOURCE 200819L
-    #define _XOPEN_SOURCE 700
-#endif
-#endif
 
 #include "acutest.h"
 
