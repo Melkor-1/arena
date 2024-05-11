@@ -14,7 +14,7 @@
  * -ying the header. These are needed to compile cleanly with -std=c.. flag.
  * These are needed for the declaration of clock_gettime() to be visible in 
  * Oracle Solaris. These defines cause compilation to fail with weird missing
- * types errors, hence they're guarded. */
+ * types errors on MacOS, hence they're guarded. */
 #if defined(__sun) && defined(__SVR4)
     #define _POSIX_C_SOURCE 200819L
     #define _XOPEN_SOURCE 700
