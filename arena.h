@@ -28,6 +28,9 @@ typedef struct arena Arena;
 
 /* Returns a new arena with the specified `capacity`.
  * If `capacity` is 0, a default size of `DEFAULT_BUF_CAP` is used.
+ * If `buf` is `nullptr`, a memory pool of the specified `capacity` is
+ * allocated internally. Else if `capacity` is 0, a default size of 
+ * `DEFAULT_BUF_CAP` is used.
  * 
  * On allocation failure, or if `buf` is a non-null pointer and `capacity` is 0,
  * returns `nullptr`. 
