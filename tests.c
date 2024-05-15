@@ -109,6 +109,7 @@ static void test_arena_alloc(void)
     TEST_CHECK(arena_alloc(arena, 1, 95));
     uint8_t *const curr_pool = arena->pools[0]->buf;
 
+    /* Verify that the remaining bytes have been set to 0xA5. */
     TEST_CHECK(curr_pool[96] == 0xA5 && curr_pool[97] == 0xA5
         && curr_pool[98] == 0xA5 && curr_pool[99] == 0xA5);
 
